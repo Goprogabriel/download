@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="description" content="PLUS app deep link handler">
+    <title>Åbner PLUS appen...</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #ffffff;
+            color: #1a1a1a;
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            /* Background image: baugrund */
+            background-image: url('/assets/baugrund.png');
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+        }
+
+        .container {
+            max-width: 420px;
+            width: 100%;
+            text-align: center;
+            /* translucent card for readability on background */
+            /* More transparent with subtle border and glass blur */
+            background: rgba(255,255,255,0.60);
+            padding: 28px;
+            border-radius: 14px;
+            box-shadow: 0 6px 18px rgba(20,20,20,0.08);
+            border: 1px solid rgba(0,0,0,0.08);
+            /* Backdrop blur for a glass-like effect (optional, supported in modern browsers) */
+            -webkit-backdrop-filter: blur(6px);
+            backdrop-filter: blur(6px);
+        }
+
+        .logo {
+            font-size: 48px;
+            margin-bottom: 24px;
+            opacity: 0.8;
+        }
+
+        .heading {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #2d2d2d;
+        }
+
+        .status {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 32px;
+        }
+
+        .fallback {
+            display: none;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .fallback.visible {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .button-primary {
+            display: inline-block;
+            background-color: #007AFF;
+            color: white;
+            text-decoration: none;
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            transition: background-color 0.2s ease;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .button-primary:hover {
+            background-color: #0056CC;
+        }
+
+        .button-primary:active {
+            background-color: #004499;
+        }
+
+        .store-buttons {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .button-store {
+            flex: 1;
+            display: inline-block;
+            background-color: #f5f5f7;
+            color: #1d1d1f;
+            text-decoration: none;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background-color 0.2s ease;
+        }
+
+        .button-store:hover {
+            background-color: #e8e8ed;
+        }
+
+        .button-store:active {
+            background-color: #d2d2d7;
+        }
+
+        .help-text {
+            font-size: 14px;
+            color: #86868b;
+            line-height: 1.5;
+            max-width: 320px;
+            margin: 0 auto;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 50%;
+            border-top-color: #007AFF;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            font-size: 14px;
+            border: 1px solid #ffeaa7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <img src="/assets/logorender.png" alt="PLUS logo" id="logoImg" width="96" height="96" style="max-width:96px;height:auto;display:block;margin:0 auto;" onerror="this.style.display='none';document.getElementById('logoFallback').style.display='block'" />
+            <div id="logoFallback" style="display:none;font-size:48px;opacity:0.8;">📱</div>
+        </div>
+        <h1 class="heading">Åbner appen ...</h1>
+        <div class="status" id="status" aria-live="polite">
+            <span class="loading-spinner"></span>Prøver at åbne appen ...
+        </div>
+
+        <div class="fallback" id="fallback">
+            <div class="error-message" id="errorMessage" style="display: none;"></div>
+            
+            <a href="#" class="button-primary" id="manualOpenBtn">
+                Åbn PLUS appen
+            </a>
+
+            <div class="store-buttons">
+                <a href="#" class="button-store" id="appStoreBtn">
+                    Hent i App Store
+                </a>
+                <a href="#" class="button-store" id="playStoreBtn">
+                    Hent i Google Play
+                </a>
+            </div>
+
+            <div class="help-text">
+                Sørg for at appen er installeret. Prøv igen fra e-mailen. Kontakt support, hvis problemet fortsætter.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration constants - easy to modify
+        const CONFIG = {
+            APP_SCHEME_BASE: 'weareplus://auth/callback',
+            APP_STORE_URL: 'https://apps.apple.com/dk/app/plus-loyalty/id6753658572',
+            PLAY_STORE_URL: 'https://play.google.com/store/apps/details?id=PLACEHOLDER',
+            REDIRECT_TIMEOUT_MS: 2000
+        };
+
+        // DOM elements
+        const statusEl = document.getElementById('status');
+        const fallbackEl = document.getElementById('fallback');
+        const errorMessageEl = document.getElementById('errorMessage');
+        const manualOpenBtn = document.getElementById('manualOpenBtn');
+        const appStoreBtn = document.getElementById('appStoreBtn');
+        const playStoreBtn = document.getElementById('playStoreBtn');
+
+        // Parse query parameters from both search and hash
+        function parseAllParams() {
+            const params = new URLSearchParams();
+            
+            // Parse query string params (?param=value)
+            const searchParams = new URLSearchParams(window.location.search);
+            for (const [key, value] of searchParams) {
+                params.set(key, value);
+            }
+            
+            // Parse hash params (#/auth?param=value or #param=value)
+            const hash = window.location.hash;
+            if (hash) {
+                // Handle both #/auth?param=value and #param=value formats
+                const hashQuery = hash.includes('?') ? hash.split('?')[1] : hash.substring(1);
+                if (hashQuery) {
+                    const hashParams = new URLSearchParams(hashQuery);
+                    for (const [key, value] of hashParams) {
+                        // Query params take precedence over hash params
+                        if (!params.has(key)) {
+                            params.set(key, value);
+                        }
+                    }
+                }
+            }
+            
+            return params;
+        }
+
+        // Build deep link with sanitized parameters
+        function buildDeepLink(params) {
+            if (params.toString() === '') {
+                return CONFIG.APP_SCHEME_BASE;
+            }
+            
+            // Sanitize and encode parameter values
+            const sanitizedParams = new URLSearchParams();
+            for (const [key, value] of params) {
+                // Only include non-empty values and sanitize them
+                if (value && typeof value === 'string') {
+                    sanitizedParams.set(key, encodeURIComponent(value));
+                }
+            }
+            
+            return `${CONFIG.APP_SCHEME_BASE}?${sanitizedParams.toString()}`;
+        }
+
+        // Show error message
+        function showError(message) {
+            errorMessageEl.textContent = message;
+            errorMessageEl.style.display = 'block';
+        }
+
+        // Show fallback UI
+        function showFallback(deepLink, hasParams = true) {
+            // Update button links
+            manualOpenBtn.href = deepLink;
+            appStoreBtn.href = CONFIG.APP_STORE_URL;
+            playStoreBtn.href = CONFIG.PLAY_STORE_URL;
+            
+            // Show appropriate error message if no params
+            if (!hasParams) {
+                showError('Mangler bekræftelseslink. Åbn fra din e-mail.');
+            }
+            
+            // Update status and show fallback
+            statusEl.innerHTML = hasParams ? 
+                'Appen åbnede ikke automatisk?' : 
+                'Åbn PLUS appen manuelt';
+            
+            fallbackEl.classList.add('visible');
+        }
+
+        // Attempt to open the app
+        function attemptAppOpen(deepLink) {
+            try {
+                // Record the time when we attempt the redirect
+                const startTime = Date.now();
+                
+                // Attempt to open the deep link
+                window.location.href = deepLink;
+                
+                // Listen for page visibility changes (helps detect if app opened)
+                const handleVisibilityChange = () => {
+                    if (document.hidden) {
+                        // Page became hidden, likely because app opened
+                        document.removeEventListener('visibilitychange', handleVisibilityChange);
+                    }
+                };
+                
+                document.addEventListener('visibilitychange', handleVisibilityChange);
+                
+                // Set timeout to show fallback if app doesn't open
+                setTimeout(() => {
+                    // Only show fallback if we're still on this page
+                    if (!document.hidden && (Date.now() - startTime) >= CONFIG.REDIRECT_TIMEOUT_MS) {
+                        document.removeEventListener('visibilitychange', handleVisibilityChange);
+                        showFallback(deepLink, true);
+                    }
+                }, CONFIG.REDIRECT_TIMEOUT_MS);
+                
+            } catch (error) {
+                console.error('Error attempting to open app:', error);
+                showFallback(deepLink, true);
+            }
+        }
+
+        // Initialize the page
+        function initialize() {
+            try {
+                // Parse all available parameters
+                const params = parseAllParams();
+                const hasParams = params.toString() !== '';
+                
+                // Build the deep link
+                const deepLink = buildDeepLink(params);
+                
+                console.log('Parsed params:', params.toString());
+                console.log('Deep link:', deepLink);
+                
+                if (hasParams) {
+                    // Auto-attempt to open the app if we have parameters
+                    attemptAppOpen(deepLink);
+                } else {
+                    // No parameters - show fallback immediately with error message
+                    showFallback(deepLink, false);
+                }
+                
+            } catch (error) {
+                console.error('Initialization error:', error);
+                showError('Der opstod en fejl. Prøv at åbne appen manuelt.');
+                showFallback(CONFIG.APP_SCHEME_BASE, false);
+            }
+        }
+
+        // Handle manual app open button clicks
+        manualOpenBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            try {
+                window.location.href = this.href;
+            } catch (error) {
+                console.error('Error opening app manually:', error);
+            }
+        });
+
+        // Initialize when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initialize);
+        } else {
+            initialize();
+        }
+    </script>
+</body>
+</html>
