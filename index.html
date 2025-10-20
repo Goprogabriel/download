@@ -334,13 +334,8 @@
                 console.log('Parsed params:', params.toString());
                 console.log('Deep link:', deepLink);
                 
-                if (hasParams) {
-                    // Auto-attempt to open the app if we have parameters
-                    attemptAppOpen(deepLink);
-                } else {
-                    // No parameters - show fallback immediately with error message
-                    showFallback(deepLink, false);
-                }
+                // Always attempt to open the app automatically
+                attemptAppOpen(deepLink);
                 
             } catch (error) {
                 console.error('Initialization error:', error);
