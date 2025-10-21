@@ -65,13 +65,20 @@
             margin-bottom: 32px;
         }
 
+        .status .status-subtext {
+            display: block;
+            font-size: 14px;
+            color: #4a4a4a;
+            margin-top: 8px;
+        }
+
         .fallback {
-            display: none;
+            margin-top: 24px;
             animation: fadeIn 0.3s ease-in;
         }
 
-        .fallback.visible {
-            display: block;
+        .fallback:not(.visible) {
+            display: none;
         }
 
         @keyframes fadeIn {
@@ -173,11 +180,12 @@
         <h1 class="heading">Åbner appen ...</h1>
         <div class="status" id="status" aria-live="polite">
             <span class="loading-spinner"></span>Prøver at åbne appen ...
+            <span class="status-subtext">Hvis du ikke har PLUS appen, kan du hente den via knapperne nedenfor.</span>
         </div>
 
-        <div class="fallback" id="fallback">
+        <div class="fallback visible" id="fallback">
             <div class="error-message" id="errorMessage" style="display: none;"></div>
-            
+
             <a href="#" class="button-primary" id="manualOpenBtn">
                 Åbn PLUS appen
             </a>
@@ -268,22 +276,28 @@
         }
 
         // Show fallback UI
-        function showFallback(deepLink, hasParams = true) {
-            // Update button links
+        function updateActionLinks(deepLink) {
             manualOpenBtn.href = deepLink;
             appStoreBtn.href = CONFIG.APP_STORE_URL;
             playStoreBtn.href = CONFIG.PLAY_STORE_URL;
-            
+        }
+
+        function showFallback(deepLink, hasParams = true) {
+            // Update button links
+            updateActionLinks(deepLink);
+
             // Show appropriate error message if no params
             if (!hasParams) {
                 showError('Mangler bekræftelseslink. Åbn fra din e-mail.');
             }
-            
+
             // Update status and show fallback
-            statusEl.innerHTML = hasParams ? 
-                'Appen åbnede ikke automatisk?' : 
+            const message = hasParams ?
+                'Appen åbnede ikke automatisk?' :
                 'Åbn PLUS appen manuelt';
-            
+
+            statusEl.innerHTML = `${message}<span class="status-subtext">Du kan altid hente PLUS appen via knapperne nedenfor.</span>`;
+
             fallbackEl.classList.add('visible');
         }
 
@@ -340,7 +354,11 @@
                 
                 console.log('Parsed params:', params.toString());
                 console.log('Deep link:', deepLink);
-                
+
+                // Keep download options visible while attempting to open
+                updateActionLinks(deepLink);
+                statusEl.innerHTML = '<span class="loading-spinner"></span>Vi prøver at åbne appen automatisk ...<span class="status-subtext">Hvis du ikke har PLUS appen, kan du hente den via knapperne nedenfor.</span>';
+
                 // Always attempt to open the app automatically
                 attemptAppOpen(deepLink);
                 
